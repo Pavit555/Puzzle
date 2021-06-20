@@ -1,0 +1,322 @@
+<!doctype html>
+<html>
+  <head>
+    <title>15 Puzzle</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+  </head>
+
+  <body>
+    <h2 Class="title"> Sliding Puzzle </h2>
+    <div class="game">
+      <div class="grid">
+        <button>1</button>
+        <button>2</button>
+        <button>3</button>
+        <button>4</button>
+        <button>5</button>
+        <button>6</button>
+        <button>7</button>
+        <button>8</button>
+        <button>9</button>
+        <button>10</button>
+        <button>11</button>
+        <button>12</button>
+        <button>13</button>
+        <button>14</button>
+        <button>15</button>
+        <button></button>
+      </div>
+
+      <div class="footer">
+        <button>New Game</button>
+        <span id="move">Moves:100</span>
+        <span id="time">Time:100</span>
+        <span id="score">Score:0</span>
+      </div>
+    </div>
+    <div id="container">
+      <div class="row">
+          <div class="name">Player1</div><div class="score">430</div>
+      </div>
+      
+      <div class="row">
+          <div class="name">Player2</div><div class="score">580</div>
+      </div>
+      
+      <div class="row">
+          <div class="name">Player3</div><div class="score">310</div>
+      </div>
+      
+     
+      
+      
+  </div>
+    
+
+
+    <script type="text/javascript">
+    class Box {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+
+
+
+
+  getTopBox() {
+    if (this.y === 0) return null;
+    return new Box(this.x, this.y - 1);
+  }
+
+  getRightBox() {
+    if (this.x === 3) return null;
+    return new Box(this.x + 1, this.y);
+  }
+
+  getBottomBox() {
+    if (this.y === 3) return null;
+    return new Box(this.x, this.y + 1);
+  }
+
+  getLeftBox() {
+    if (this.x === 0) return null;
+    return new Box(this.x - 1, this.y);
+  }
+
+  getNextdoorBoxes() {
+    return [
+      this.getTopBox(),
+      this.getRightBox(),
+      this.getBottomBox(),
+      this.getLeftBox()
+    ].filter(box => box !== null);
+  }
+
+  getRandomNextdoorBox() {
+    const nextdoorBoxes = this.getNextdoorBoxes();
+    return nextdoorBoxes[Math.floor(Math.random() * nextdoorBoxes.length)];
+  }
+}
+
+const swapBoxes = (grid, box1, box2) => {
+  const temp = grid[box1.y][box1.x];
+  grid[box1.y][box1.x] = grid[box2.y][box2.x];
+  grid[box2.y][box2.x] = temp;
+};
+
+const isSolved = grid => {
+  //! win condition 
+  return (
+    grid[0][0] === 1 &&
+    grid[0][1] === 2 &&
+    grid[0][2] === 3 &&
+    grid[0][3] === 4 &&
+    grid[1][0] === 5 &&
+    grid[1][1] === 6 &&
+    grid[1][2] === 7 &&
+    grid[1][3] === 8 &&
+    grid[2][0] === 9 &&
+    grid[2][1] === 10 &&
+    grid[2][2] === 11 &&
+    grid[2][3] === 12 &&
+    grid[3][0] === 13 &&
+    grid[3][1] === 14 &&
+    grid[3][2] === 15 &&
+    grid[3][3] === 0
+  );
+};
+
+const getRandomGrid = () => {
+  let grid = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 0]];
+
+
+  let blankBox = new Box(3, 3);
+  for (let i = 0; i < 1000; i++) {
+    const randomNextdoorBox = blankBox.getRandomNextdoorBox();
+    swapBoxes(grid, blankBox, randomNextdoorBox);
+    blankBox = randomNextdoorBox;
+  }
+
+  if (isSolved(grid)) return getRandomGrid();
+  return grid;
+};
+
+class State {
+  constructor(grid, move, time, status,score) {
+    this.grid = grid;
+    this.move = move;
+    this.time = time;
+    this.status = status;
+    this.score=score;
+  }
+
+  static ready() {
+    
+    return new State(
+      [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+      0,
+      0,
+      "ready",
+      0
+    );
+  }
+
+  static start() {
+    return new State(getRandomGrid(), 0, 0, "playing",0);
+  }
+}
+
+
+class Game {
+  constructor(state) {
+    this.state = state;
+    this.tickId = null;
+    this.tick = this.tick.bind(this);
+    this.render();
+    this.handleClickBox = this.handleClickBox.bind(this);
+  }
+
+  static ready() {
+    return new Game(State.ready());
+  }
+
+  tick() {
+    this.setState({ time: this.state.time + 1 });
+  }
+
+  setState(newState) {
+    this.state = { ...this.state, ...newState };
+    this.render();
+  }
+
+  handleClickBox(box) {
+    return function() {
+      const nextdoorBoxes = box.getNextdoorBoxes();
+      const blankBox = nextdoorBoxes.find(
+        nextdoorBox => this.state.grid[nextdoorBox.y][nextdoorBox.x] === 0
+      );
+      if (blankBox) {
+        const newGrid = [...this.state.grid];
+        swapBoxes(newGrid, box, blankBox);
+        if (isSolved(newGrid)) {
+          clearInterval(this.tickId);
+          this.setState({
+            status: "won",
+            grid: newGrid,
+            score:this.state.score+100,
+            move: this.state.move + 1
+          });
+        } else {
+          this.setState({
+            grid: newGrid,
+            score:this.state.score,
+            move: this.state.move + 1
+          });
+        }
+      }
+    }.bind(this);
+  }
+
+  render() {
+    const { grid, move, time, status,score} = this.state;
+
+   
+    const newGrid = document.createElement("div");
+    newGrid.className = "grid";
+    for (let i = 0; i < 4; i++) {
+      for (let j = 0; j < 4; j++) {
+        const button = document.createElement("button");
+
+        if (status === "playing") {
+          button.addEventListener("click", this.handleClickBox(new Box(j, i)));
+        }
+
+        button.textContent = grid[i][j] === 0 ? "" : grid[i][j].toString();
+        newGrid.appendChild(button);
+      }
+    }
+    document.querySelector(".grid").replaceWith(newGrid);
+
+    
+    const newButton = document.createElement("button");
+    if (status === "ready") newButton.textContent = "New Game";
+    if (status === "playing") newButton.textContent = "Playing";
+    if (status === "won") newButton.textContent = "New Game";
+    newButton.addEventListener("click", () => {
+      clearInterval(this.tickId);
+      this.tickId = setInterval(this.tick, 1000);
+      this.setState(State.start());
+      
+
+    });
+    document.querySelector(".footer button").replaceWith(newButton);
+
+   
+    document.getElementById("move").textContent =`Moves: ${move}`;
+
+    
+    document.getElementById("time").textContent =`Time: ${time}`;
+    
+    document.getElementById("score").textContent =`Score: ${score}`;
+    
+
+    
+    if (status === "won") {
+      document.querySelector(".message").textContent ="Congratulations!You won"+ move+ "Time taken"+time+"sec" +"Score" + score;
+     alert("Congratulations!You won"+ move+"Time taken"+time+"sec" +"Score" + score);
+    } else {
+      document.querySelector(".message").textContent = "";
+    }
+  }
+}
+
+const GAME = Game.ready();
+let scores = [
+    {name: "Player 1", score: 300},
+    {name: "Player 2", score: 370},
+    {name: "Player 3", score: 500},
+]
+
+function updateLeaderboardView() {
+    let leaderboard = document.getElementById("leaderboard");
+    leaderboard.innerHTML = "";
+
+    scores.sort(function(a, b){ return b.score - a.score  });
+    let elements = []; // we'll need created elements to update colors later on
+    // create elements for each player
+    for(let i=0; i<scores.length; i++) {
+        let name = document.createElement("div");
+        let score = document.createElement("div");
+        name.classList.add("name");
+        score.classList.add("score");
+        name.innerText = scores[i].name;
+        score.innerText = scores[i].score;
+
+        let scoreRow = document.createElement("div");
+        scoreRow.classList.add("row");
+        scoreRow.appendChild(name);
+        scoreRow.appendChild(score);
+        leaderboard.appendChild(scoreRow);
+
+        elements.push(scoreRow);
+
+    }
+
+    let colors = ["gold", "silver", "#cd7f32"];
+    for(let i=0; i < 3; i++) {
+        elements[i].style.color = colors[i];
+    }
+}
+
+updateLeaderboardView();
+function randomize() {
+    for(var i=0; i<scores.length; i++) {
+        scores[i].score = Math.floor(Math.random() * (600 - 300 + 1)) + 300;
+    }
+   
+    updateLeaderboardView();
+}
+    </script>
+  </body>
+</html>
